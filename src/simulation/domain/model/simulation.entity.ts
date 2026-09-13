@@ -12,3 +12,12 @@ export interface SimulateCreditResponse {
     monthlyPayment: number;
     currency: string;
 }
+
+export interface SaveCreditLeadRequest {
+    customerEmail: string;
+    propertyValue: number;
+    downPayment: number;
+    loanAmount: number;
+    monthlyPayment: number;
+    currency: string;
+}
