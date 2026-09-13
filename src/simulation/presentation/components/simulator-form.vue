@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import axios from 'axios';
 import type { SimulateCreditRequest, SimulateCreditResponse } from '../../domain/model/simulation.entity';
 
 const form = ref<SimulateCreditRequest>({
@@ -11,10 +12,19 @@ const form = ref<SimulateCreditRequest>({
 });
 
 const result = ref<SimulateCreditResponse | null>(null);
+const errorMessage = ref<string | null>(null);
 
-const simulate = () => {
-  // Aquí conectaremos con el backend en el siguiente paso
-  console.log('Datos enviados:', form.value);
+const simulate = async () => {
+  errorMessage.value = null;
+  result.value = null;
+
+  try {
+    // Cambia el puerto 5158 si tu backend de C# usa uno distinto
+    const response = await axios.post<SimulateCreditResponse>('http://localhost:5158/api/v1/Simulations', form.value);
+    result.value = response.data;
+  } catch (error: any) {
+    errorMessage.value = error.response?.data?.error || 'Error al conectar con el servidor.';
+  }
 };
 </script>
 
@@ -23,6 +33,7 @@ const simulate = () => {
     <h2 class="text-2xl font-bold mb-6 text-gray-800">Simulador de Crédito Inmobiliario</h2>
 
     <form @submit.prevent="simulate" class="space-y-4">
+      <!-- ... (Mantén los mismos inputs que ya teníamos) ... -->
       <div>
         <label class="block text-sm font-medium text-gray-700">Valor del Inmueble</label>
         <input v-model.number="form.propertyValue" type="number" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required />
@@ -56,5 +67,17 @@ const simulate = () => {
         Calcular Cuota
       </button>
     </form>
+
+    <!-- Sección de Resultados -->
+    <div v-if="result" class="mt-6 p-4 bg-green-50 border border-green-200 rounded-md">
+      <h3 class="text-lg font-bold text-green-800 mb-2">Resultado de la Simulación</h3>
+      <p class="text-gray-700">Monto a financiar: <strong>{{ result.loanAmount }} {{ result.currency }}</strong></p>
+      <p class="text-xl text-gray-900 mt-2">Cuota Mensual: <span class="font-bold text-green-700">{{ result.monthlyPayment }} {{ result.currency }}</span></p>
+    </div>
+
+    <!-- Sección de Errores -->
+    <div v-if="errorMessage" class="mt-6 p-4 bg-red-50 border border-red-200 rounded-md">
+      <p class="text-red-700 font-medium">{{ errorMessage }}</p>
+    </div>
   </div>
 </template>
