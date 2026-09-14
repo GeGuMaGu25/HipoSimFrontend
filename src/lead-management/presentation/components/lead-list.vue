@@ -9,10 +9,15 @@ const errorMessage = ref<string | null>(null);
 
 const fetchLeads = async () => {
   try {
-    const response = await axios.get<CreditLead[]>('http://localhost:5158/api/v1/CreditLeads');
+    const token = localStorage.getItem('jwt_token');
+    const response = await axios.get<CreditLead[]>('http://localhost:5158/api/v1/CreditLeads', {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
     leads.value = response.data;
   } catch (error: any) {
-    errorMessage.value = 'Error al cargar los leads desde el servidor.';
+    errorMessage.value = 'Error de acceso. Por favor, inicia sesión nuevamente.';
   } finally {
     loading.value = false;
   }
