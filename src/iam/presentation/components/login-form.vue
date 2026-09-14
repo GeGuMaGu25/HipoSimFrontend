@@ -3,8 +3,8 @@ import { ref } from 'vue';
 import axios from 'axios';
 
 const emit = defineEmits(['login-success']);
-const email = ref('admin@hiposim.com');
-const password = ref('admin123');
+const email = ref('');
+const password = ref('');
 const errorMessage = ref('');
 
 const login = async () => {
