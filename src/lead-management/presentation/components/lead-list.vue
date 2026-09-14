@@ -1,66 +1,123 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
-import type { CreditLead } from '../../domain/model/lead.entity';
 
-const leads = ref<CreditLead[]>([]);
-const loading = ref(true);
-const errorMessage = ref<string | null>(null);
+// Estados
+const leads = ref<any[]>([]);
+const metrics = ref<any>(null);
+const errorMessage = ref('');
 
-const fetchLeads = async () => {
+const fetchDashboardData = async () => {
   try {
+    // 1. Recuperamos el token de la sesión actual
     const token = localStorage.getItem('jwt_token');
-    const response = await axios.get<CreditLead[]>('http://localhost:5158/api/v1/CreditLeads', {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    });
-    leads.value = response.data;
-  } catch (error: any) {
-    errorMessage.value = 'Error de acceso. Por favor, inicia sesión nuevamente.';
-  } finally {
-    loading.value = false;
+    const config = {
+      headers: { Authorization: `Bearer ${token}` }
+    };
+
+    // 2. Pasamos el config con el token a ambas peticiones
+    const [leadsRes, metricsRes] = await Promise.all([
+      axios.get('http://localhost:5158/api/v1/CreditLeads', config),
+      axios.get('http://localhost:5158/api/v1/CreditLeads/metrics', config)
+    ]);
+
+    leads.value = leadsRes.data.sort((a: any, b: any) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    metrics.value = metricsRes.data;
+  } catch (error) {
+    errorMessage.value = 'Error al cargar los datos del Dashboard.';
+    console.error(error);
   }
 };
 
-// Formatear la fecha para que se vea legible
-const formatDate = (dateString: string) => {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+const updateLeadStatus = async (id: string, newStatus: string) => {
+  try {
+    const token = localStorage.getItem('jwt_token');
+
+    // En las peticiones PATCH/POST, el config va como tercer parámetro
+    await axios.patch(`http://localhost:5158/api/v1/CreditLeads/${id}/status`,
+        { newStatus: newStatus },
+        { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    await fetchDashboardData();
+  } catch (error) {
+    console.error('Error actualizando estado', error);
+  }
 };
 
-onMounted(fetchLeads);
+onMounted(fetchDashboardData);
 </script>
 
 <template>
-  <div class="max-w-5xl mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
-    <h2 class="text-2xl font-bold mb-6 text-gray-800">Dashboard Comercial - Leads Registrados</h2>
+  <div class="max-w-6xl mx-auto p-6 mt-2">
+    <h2 class="text-3xl font-bold mb-6 text-gray-800">Dashboard de Ventas Inmobiliarias</h2>
+    <p v-if="errorMessage" class="text-red-500 mb-4">{{ errorMessage }}</p>
 
-    <div v-if="loading" class="text-center text-gray-500 py-10">Cargando datos...</div>
+    <!-- Tarjetas de Métricas KPI -->
+    <div v-if="metrics" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div class="bg-white p-5 rounded-lg shadow border-l-4 border-blue-500">
+        <p class="text-sm text-gray-500 font-semibold mb-1">Total Solicitudes / Hoy</p>
+        <p class="text-2xl font-bold text-gray-800">{{ metrics.totalLeads }} <span class="text-blue-500 text-lg">/ {{ metrics.leadsToday }}</span></p>
+      </div>
+      <div class="bg-white p-5 rounded-lg shadow border-l-4 border-indigo-500">
+        <p class="text-sm text-gray-500 font-semibold mb-1">Solicitudes (Este Mes)</p>
+        <p class="text-2xl font-bold text-gray-800">{{ metrics.leadsThisMonth }}</p>
+      </div>
+      <div class="bg-white p-5 rounded-lg shadow border-l-4 border-green-500">
+        <p class="text-sm text-gray-500 font-semibold mb-1">Ventas Concretadas</p>
+        <p class="text-2xl font-bold text-gray-800">{{ metrics.totalSales }}</p>
+      </div>
+      <div class="bg-white p-5 rounded-lg shadow border-l-4 border-emerald-500">
+        <p class="text-sm text-gray-500 font-semibold mb-1">Volumen de Ventas</p>
+        <p class="text-2xl font-bold text-gray-800">${{ metrics.totalSalesVolume.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</p>
+      </div>
+    </div>
 
-    <div v-else-if="errorMessage" class="text-center text-red-600 font-medium py-10">{{ errorMessage }}</div>
-
-    <div v-else class="overflow-x-auto">
-      <table class="min-w-full bg-white border border-gray-200">
-        <thead class="bg-gray-100">
+    <!-- Tabla Interactiva de Leads -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+      <table class="w-full text-left border-collapse">
+        <thead class="bg-gray-100 border-b">
         <tr>
-          <th class="py-3 px-4 border-b text-left text-sm font-semibold text-gray-700">Cliente</th>
-          <th class="py-3 px-4 border-b text-left text-sm font-semibold text-gray-700">Inmueble</th>
-          <th class="py-3 px-4 border-b text-left text-sm font-semibold text-gray-700">Préstamo</th>
-          <th class="py-3 px-4 border-b text-left text-sm font-semibold text-gray-700">Cuota Mensual</th>
-          <th class="py-3 px-4 border-b text-left text-sm font-semibold text-gray-700">Fecha</th>
+          <th class="p-4 font-semibold text-gray-700">Cliente (Email)</th>
+          <th class="p-4 font-semibold text-gray-700">Monto Inmueble</th>
+          <th class="p-4 font-semibold text-gray-700">Cuota Estimada</th>
+          <th class="p-4 font-semibold text-gray-700">Estado Actual</th>
+          <th class="p-4 font-semibold text-gray-700">Acción Comercial</th>
         </tr>
         </thead>
         <tbody>
-        <tr v-for="lead in leads" :key="lead.id" class="hover:bg-gray-50 transition">
-          <td class="py-3 px-4 border-b text-sm text-gray-800 font-medium">{{ lead.customerEmail }}</td>
-          <td class="py-3 px-4 border-b text-sm text-gray-600">{{ lead.propertyValue }} {{ lead.currency }}</td>
-          <td class="py-3 px-4 border-b text-sm text-gray-600">{{ lead.loanAmount }} {{ lead.currency }}</td>
-          <td class="py-3 px-4 border-b text-sm text-green-700 font-bold">{{ lead.monthlyPayment }} {{ lead.currency }}</td>
-          <td class="py-3 px-4 border-b text-sm text-gray-500">{{ formatDate(lead.createdAt) }}</td>
+        <tr v-for="lead in leads" :key="lead.id" class="border-b hover:bg-gray-50 transition">
+          <td class="p-4 text-gray-800">{{ lead.customerEmail }}</td>
+          <td class="p-4 font-medium text-gray-700">${{ lead.propertyValue.toLocaleString('en-US') }}</td>
+          <td class="p-4 text-blue-600 font-semibold">${{ lead.monthlyPayment.toLocaleString('en-US') }}</td>
+          <td class="p-4">
+              <span :class="[
+                'px-2 py-1 rounded text-xs font-bold uppercase tracking-wider',
+                (lead.status || 'Pending') === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                lead.status === 'Approved' ? 'bg-blue-100 text-blue-800' :
+                lead.status === 'Sold' ? 'bg-green-100 text-green-800' :
+                'bg-red-100 text-red-800'
+              ]">
+                {{ lead.status || 'Pending' }}
+              </span>
+          </td>
+          <td class="p-4">
+            <select
+                @change="updateLeadStatus(lead.id, ($event.target as HTMLSelectElement).value)"
+                class="border border-gray-300 rounded p-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+            >
+              <option value="" disabled selected>Cambiar estado...</option>
+              <option value="Pending" :disabled="lead.status === 'Pending'">Volver a Pendiente</option>
+              <option value="Approved" :disabled="lead.status === 'Approved'">Marcar Aprobado</option>
+              <option value="Rejected" :disabled="lead.status === 'Rejected'">Marcar Rechazado</option>
+              <option value="Sold" :disabled="lead.status === 'Sold'">Venta Concretada</option>
+            </select>
+          </td>
         </tr>
         <tr v-if="leads.length === 0">
-          <td colspan="5" class="py-6 text-center text-gray-500">No hay leads registrados aún.</td>
+          <td colspan="5" class="p-8 text-center text-gray-500">No hay solicitudes registradas aún.</td>
         </tr>
         </tbody>
       </table>
