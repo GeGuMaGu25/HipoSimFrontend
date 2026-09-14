@@ -4,8 +4,9 @@ import SimulatorForm from './simulation/presentation/components/simulator-form.v
 import LeadList from './lead-management/presentation/components/lead-list.vue';
 import LoginForm from './iam/presentation/components/login-form.vue';
 import UserManagement from './iam/presentation/components/user-management.vue';
+import LandingPage from './marketing/presentation/components/landing-page.vue';
 
-const currentTab = ref<'simulator' | 'dashboard' | 'login' | 'users'>('simulator');
+const currentTab = ref<'home' | 'simulator' | 'dashboard' | 'login' | 'users'>('home');
 const isAuthenticated = ref(false);
 const userRole = ref<string | null>(null);
 
@@ -50,6 +51,9 @@ onMounted(checkAuth);
       <div class="max-w-5xl mx-auto flex gap-6 items-center justify-between">
         <div class="flex gap-6 items-center">
           <h1 class="font-bold text-xl mr-4">HipoSim</h1>
+          <button @click="currentTab = 'home'" :class="['px-3 py-2 rounded transition', currentTab === 'home' ? 'bg-blue-600 font-bold' : 'hover:bg-blue-700']">
+            Inicio
+          </button>
           <button @click="currentTab = 'simulator'" :class="['px-3 py-2 rounded transition', currentTab === 'simulator' ? 'bg-blue-600 font-bold' : 'hover:bg-blue-700']">
             Simulador
           </button>
@@ -75,7 +79,8 @@ onMounted(checkAuth);
     </nav>
 
     <!-- Contenido Dinámico -->
-    <div class="py-10">
+    <div>
+      <LandingPage v-if="currentTab === 'home'" @go-to-simulator="currentTab = 'simulator'" />
       <SimulatorForm v-if="currentTab === 'simulator'" />
       <LeadList v-else-if="currentTab === 'dashboard'" />
       <UserManagement v-else-if="currentTab === 'users'" />
