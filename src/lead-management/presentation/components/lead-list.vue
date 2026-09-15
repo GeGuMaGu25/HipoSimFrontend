@@ -47,6 +47,23 @@ const updateLeadStatus = async (id: string, newStatus: string) => {
   }
 };
 
+const evaluateLeadAtBank = async (id: string) => {
+  try {
+    const token = localStorage.getItem('jwt_token');
+
+    // Es un POST sin body, pero requiere el config de autorización
+    await axios.post(`http://localhost:5158/api/v1/CreditEvaluations/${id}`,
+        {}, // Body vacío
+        { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    // Refrescamos la tabla para ver el nuevo estado (BankApproved o BankRejected)
+    await fetchDashboardData();
+  } catch (error) {
+    console.error('Error al solicitar evaluación externa', error);
+  }
+};
+
 onMounted(fetchDashboardData);
 </script>
 
@@ -98,12 +115,14 @@ onMounted(fetchDashboardData);
                 (lead.status || 'Pending') === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
                 lead.status === 'Approved' ? 'bg-blue-100 text-blue-800' :
                 lead.status === 'Sold' ? 'bg-green-100 text-green-800' :
+                lead.status === 'BankApproved' ? 'bg-emerald-200 text-emerald-900 border border-emerald-400' :
+                lead.status === 'BankRejected' ? 'bg-red-200 text-red-900 border border-red-400' :
                 'bg-red-100 text-red-800'
               ]">
                 {{ lead.status || 'Pending' }}
               </span>
           </td>
-          <td class="p-4">
+          <td class="p-4 flex items-center gap-2">
             <select
                 @change="updateLeadStatus(lead.id, ($event.target as HTMLSelectElement).value)"
                 class="border border-gray-300 rounded p-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
@@ -114,6 +133,16 @@ onMounted(fetchDashboardData);
               <option value="Rejected" :disabled="lead.status === 'Rejected'">Marcar Rechazado</option>
               <option value="Sold" :disabled="lead.status === 'Sold'">Venta Concretada</option>
             </select>
+
+            <!-- Nuevo botón para enviar al banco -->
+            <button
+                v-if="lead.status !== 'BankApproved' && lead.status !== 'BankRejected' && lead.status !== 'Sold'"
+                @click="evaluateLeadAtBank(lead.id)"
+                title="Enviar a evaluación bancaria externa"
+                class="bg-purple-600 hover:bg-purple-700 text-white p-1.5 rounded transition shadow-sm"
+            >
+              🏦 Evaluar
+            </button>
           </td>
         </tr>
         <tr v-if="leads.length === 0">
