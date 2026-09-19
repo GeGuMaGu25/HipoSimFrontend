@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import SimulatorForm from './simulation/presentation/components/simulator-form.vue';
 import LeadList from './lead-management/presentation/components/lead-list.vue';
 import LoginForm from './iam/presentation/components/login-form.vue';
@@ -10,6 +10,7 @@ import ProjectCatalog from './marketing/presentation/components/project-catalog.
 const currentTab = ref<'home' | 'catalog' | 'simulator' | 'dashboard' | 'login' | 'users'>('home');
 const isAuthenticated = ref(false);
 const userRole = ref<string | null>(null);
+const isScrolled = ref(false);
 
 const checkAuth = () => {
   const token = localStorage.getItem('jwt_token');
@@ -17,11 +18,8 @@ const checkAuth = () => {
 
   if (token) {
     try {
-      // Usamos || '' para garantizar que atob() siempre reciba un string, resolviendo el TS2345
       const payloadString = token.split('.')[1] || '';
       const payload = JSON.parse(atob(payloadString));
-
-      // Claim estándar de Microsoft para roles
       userRole.value = payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || payload.role;
     } catch {
       userRole.value = null;
@@ -29,6 +27,10 @@ const checkAuth = () => {
   } else {
     userRole.value = null;
   }
+};
+
+const handleScroll = () => {
+  isScrolled.value = window.scrollY > 20;
 };
 
 const handleLoginSuccess = () => {
@@ -39,51 +41,68 @@ const handleLoginSuccess = () => {
 const logout = () => {
   localStorage.removeItem('jwt_token');
   checkAuth();
-  currentTab.value = 'home'; // Ahora al cerrar sesión redirige al Inicio público
+  currentTab.value = 'home';
 };
 
-onMounted(checkAuth);
+onMounted(() => {
+  checkAuth();
+  window.addEventListener('scroll', handleScroll);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll);
+});
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-100">
-    <!-- Barra de Navegación -->
-    <nav class="bg-blue-800 text-white p-4 shadow-md">
-      <div class="max-w-5xl mx-auto flex gap-6 items-center justify-between">
-        <div class="flex gap-6 items-center">
-          <h1 class="font-bold text-xl mr-4">HipoSim</h1>
-          <button @click="currentTab = 'home'" :class="['px-3 py-2 rounded transition', currentTab === 'home' ? 'bg-blue-600 font-bold' : 'hover:bg-blue-700']">
-            Inicio
-          </button>
-          <button @click="currentTab = 'catalog'" :class="['px-3 py-2 rounded transition', currentTab === 'catalog' ? 'bg-blue-600 font-bold' : 'hover:bg-blue-700']">
-            Proyectos
-          </button>
-          <button @click="currentTab = 'simulator'" :class="['px-3 py-2 rounded transition', currentTab === 'simulator' ? 'bg-blue-600 font-bold' : 'hover:bg-blue-700']">
-            Simulador
-          </button>
+  <div class="min-h-screen bg-slate-50 font-sans">
 
-          <button v-if="isAuthenticated" @click="currentTab = 'dashboard'" :class="['px-3 py-2 rounded transition', currentTab === 'dashboard' ? 'bg-blue-600 font-bold' : 'hover:bg-blue-700']">
-            Dashboard Leads
-          </button>
+    <!-- Barra de Navegación Fija (Oculta en Login) -->
+    <nav v-if="currentTab !== 'login'"
+         :class="[
+           'fixed w-full top-0 z-50 transition-all duration-500',
+           isScrolled || currentTab !== 'home' ? 'bg-blue-900 shadow-md py-3' : 'bg-slate-900/40 backdrop-blur-md py-5 border-b border-white/10'
+         ]">
+      <div class="max-w-6xl mx-auto px-6 flex gap-6 items-center justify-between text-white">
 
-          <!-- Botón exclusivo para el rol Admin -->
-          <button v-if="isAuthenticated && userRole === 'Admin'" @click="currentTab = 'users'" :class="['px-3 py-2 rounded transition', currentTab === 'users' ? 'bg-blue-600 font-bold' : 'hover:bg-blue-700']">
-            Gestión Usuarios
-          </button>
+        <div class="flex gap-8 items-center">
+          <!-- Logo Real en lugar de texto -->
+          <img src="../public/assets/logo.jpeg" alt="HipoSim Logo" class="h-10 cursor-pointer hover:scale-105 transition-transform" @click="currentTab = 'home'" />
 
-          <button v-if="!isAuthenticated" @click="currentTab = 'login'" :class="['px-3 py-2 rounded transition', currentTab === 'login' ? 'bg-blue-600 font-bold' : 'hover:bg-blue-700']">
-            Acceso Comercial
-          </button>
+          <div class="hidden md:flex gap-2">
+            <button @click="currentTab = 'home'" :class="['px-4 py-2 rounded-full transition text-sm font-medium', currentTab === 'home' ? 'bg-white/20' : 'hover:bg-white/10']">
+              Inicio
+            </button>
+            <button @click="currentTab = 'catalog'" :class="['px-4 py-2 rounded-full transition text-sm font-medium', currentTab === 'catalog' ? 'bg-white/20' : 'hover:bg-white/10']">
+              Proyectos
+            </button>
+            <button @click="currentTab = 'simulator'" :class="['px-4 py-2 rounded-full transition text-sm font-medium', currentTab === 'simulator' ? 'bg-white/20' : 'hover:bg-white/10']">
+              Simulador
+            </button>
+
+            <button v-if="isAuthenticated" @click="currentTab = 'dashboard'" :class="['px-4 py-2 rounded-full transition text-sm font-medium', currentTab === 'dashboard' ? 'bg-white/20' : 'hover:bg-white/10']">
+              Dashboard Leads
+            </button>
+
+            <button v-if="isAuthenticated && userRole === 'Admin'" @click="currentTab = 'users'" :class="['px-4 py-2 rounded-full transition text-sm font-medium', currentTab === 'users' ? 'bg-white/20' : 'hover:bg-white/10']">
+              Gestión Usuarios
+            </button>
+          </div>
         </div>
 
-        <button v-if="isAuthenticated" @click="logout" class="px-3 py-2 bg-red-600 hover:bg-red-700 rounded transition font-bold text-sm">
-          Cerrar Sesión
-        </button>
+        <div class="flex items-center gap-4">
+          <button v-if="!isAuthenticated" @click="currentTab = 'login'" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-full transition font-bold text-sm shadow-lg shadow-blue-600/30">
+            Acceso Comercial
+          </button>
+          <button v-if="isAuthenticated" @click="logout" class="px-5 py-2.5 bg-red-500 hover:bg-red-400 rounded-full transition font-bold text-sm shadow-lg shadow-red-500/30">
+            Cerrar Sesión
+          </button>
+        </div>
       </div>
     </nav>
 
-    <!-- Contenido Dinámico -->
-    <div>
+    <!-- Contenido Dinámico (Espaciado superior condicional para no quedar detrás del nav) -->
+    <div :class="currentTab !== 'login' ? 'pt-20' : ''">
       <LandingPage v-if="currentTab === 'home'" @explore-projects="currentTab = 'catalog'" />
       <ProjectCatalog v-else-if="currentTab === 'catalog'" @go-to-simulator="currentTab = 'simulator'" />
       <SimulatorForm v-else-if="currentTab === 'simulator'" />
