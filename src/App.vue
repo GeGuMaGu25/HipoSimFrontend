@@ -124,7 +124,7 @@ onUnmounted(() => {
           @go-back="currentTab = 'catalog'"
       />
 
-      <SimulatorForm v-else-if="currentTab === 'simulator'" />
+      <SimulatorForm v-else-if="currentTab === 'simulator'" :standalone="true" />
       <LeadList v-else-if="currentTab === 'dashboard'" />
       <UserManagement v-else-if="currentTab === 'users'" />
       <LoginForm v-else-if="currentTab === 'login'" @login-success="handleLoginSuccess" />
