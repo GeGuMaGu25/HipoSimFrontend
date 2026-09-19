@@ -7,8 +7,9 @@ import UserManagement from './iam/presentation/components/user-management.vue';
 import LandingPage from './marketing/presentation/components/landing-page.vue';
 import ProjectCatalog from './marketing/presentation/components/project-catalog.vue';
 import ProjectDetail from './marketing/presentation/components/project-detail.vue';
+import DashboardMetrics from './lead-management/presentation/components/dashboard-metrics.vue';
 
-const currentTab = ref<'home' | 'catalog' | 'project-detail' | 'simulator' | 'dashboard' | 'login' | 'users'>('home');
+const currentTab = ref<'home' | 'catalog' | 'project-detail' | 'simulator' | 'metrics' | 'dashboard' | 'login' | 'users'>('home');
 const selectedProject = ref<any>(null);
 
 const isAuthenticated = ref(false);
@@ -88,8 +89,11 @@ onUnmounted(() => {
               Simulador
             </button>
 
+            <button v-if="isAuthenticated" @click="currentTab = 'metrics'" :class="['px-4 py-2 rounded-full transition text-sm font-medium', currentTab === 'metrics' ? 'bg-white/20' : 'hover:bg-white/10']">
+              Métricas
+            </button>
             <button v-if="isAuthenticated" @click="currentTab = 'dashboard'" :class="['px-4 py-2 rounded-full transition text-sm font-medium', currentTab === 'dashboard' ? 'bg-white/20' : 'hover:bg-white/10']">
-              Dashboard Leads
+              Solicitudes
             </button>
 
             <button v-if="isAuthenticated && userRole === 'Admin'" @click="currentTab = 'users'" :class="['px-4 py-2 rounded-full transition text-sm font-medium', currentTab === 'users' ? 'bg-white/20' : 'hover:bg-white/10']">
@@ -125,6 +129,7 @@ onUnmounted(() => {
       />
 
       <SimulatorForm v-else-if="currentTab === 'simulator'" :standalone="true" />
+      <DashboardMetrics v-else-if="currentTab === 'metrics'" />
       <LeadList v-else-if="currentTab === 'dashboard'" />
       <UserManagement v-else-if="currentTab === 'users'" />
       <LoginForm v-else-if="currentTab === 'login'" @login-success="handleLoginSuccess" />
