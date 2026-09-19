@@ -5,8 +5,9 @@ import LeadList from './lead-management/presentation/components/lead-list.vue';
 import LoginForm from './iam/presentation/components/login-form.vue';
 import UserManagement from './iam/presentation/components/user-management.vue';
 import LandingPage from './marketing/presentation/components/landing-page.vue';
+import ProjectCatalog from './marketing/presentation/components/project-catalog.vue';
 
-const currentTab = ref<'home' | 'simulator' | 'dashboard' | 'login' | 'users'>('home');
+const currentTab = ref<'home' | 'catalog' | 'simulator' | 'dashboard' | 'login' | 'users'>('home');
 const isAuthenticated = ref(false);
 const userRole = ref<string | null>(null);
 
@@ -38,7 +39,7 @@ const handleLoginSuccess = () => {
 const logout = () => {
   localStorage.removeItem('jwt_token');
   checkAuth();
-  currentTab.value = 'simulator';
+  currentTab.value = 'home'; // Ahora al cerrar sesión redirige al Inicio público
 };
 
 onMounted(checkAuth);
@@ -53,6 +54,9 @@ onMounted(checkAuth);
           <h1 class="font-bold text-xl mr-4">HipoSim</h1>
           <button @click="currentTab = 'home'" :class="['px-3 py-2 rounded transition', currentTab === 'home' ? 'bg-blue-600 font-bold' : 'hover:bg-blue-700']">
             Inicio
+          </button>
+          <button @click="currentTab = 'catalog'" :class="['px-3 py-2 rounded transition', currentTab === 'catalog' ? 'bg-blue-600 font-bold' : 'hover:bg-blue-700']">
+            Proyectos
           </button>
           <button @click="currentTab = 'simulator'" :class="['px-3 py-2 rounded transition', currentTab === 'simulator' ? 'bg-blue-600 font-bold' : 'hover:bg-blue-700']">
             Simulador
@@ -80,8 +84,9 @@ onMounted(checkAuth);
 
     <!-- Contenido Dinámico -->
     <div>
-      <LandingPage v-if="currentTab === 'home'" @go-to-simulator="currentTab = 'simulator'" />
-      <SimulatorForm v-if="currentTab === 'simulator'" />
+      <LandingPage v-if="currentTab === 'home'" @explore-projects="currentTab = 'catalog'" />
+      <ProjectCatalog v-else-if="currentTab === 'catalog'" @go-to-simulator="currentTab = 'simulator'" />
+      <SimulatorForm v-else-if="currentTab === 'simulator'" />
       <LeadList v-else-if="currentTab === 'dashboard'" />
       <UserManagement v-else-if="currentTab === 'users'" />
       <LoginForm v-else-if="currentTab === 'login'" @login-success="handleLoginSuccess" />
